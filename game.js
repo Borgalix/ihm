@@ -12,7 +12,7 @@ const playerHeight = 30;
 const playerSpeed = 2;
 const obstacleWidth = 30;
 const obstacleHeight = 30;
-const obstacleSpeed = 0.5;
+const obstacleSpeed = 0.4;
 const bulletWidth = 5;
 const bulletHeight = 10;
 const bulletSpeed = 7;
@@ -30,6 +30,7 @@ const enemyGlobalShotDelay = 1000;  // Délai de 1 seconde entre chaque tir glob
 
 
 // Variables de l'état du jeu
+let playerLives = 3;  // Nombre initial de vies
 let playerX = canvas.width / 2 - playerWidth / 2;
 let playerY = canvas.height - playerHeight - 10;
 let playerDx = 0;
@@ -65,6 +66,13 @@ function drawBullets() {
     }
 }
 
+// Fonction pour dessiner le nombre de vies restantes
+function drawLives() {
+    ctx.fillStyle = 'white';
+    ctx.font = '20px Arial';
+    ctx.fillText('Vies: ' + playerLives, 10, 30);  // Affiche les vies dans le coin supérieur gauche
+}
+
 // Fonction pour déplacer le joueur
 function movePlayer() {
     playerX += playerDx;
@@ -77,13 +85,7 @@ function movePlayer() {
     if (playerY + playerHeight > canvas.height) playerY = canvas.height - playerHeight;
 }
 
-// Dimensions et espacement des ennemis
-const numRows = 3; // Nombre de rangées
-const numCols = 8; // Nombre d'ennemis par rangée
-const enemySpacingX = 20; // Espacement horizontal entre les ennemis
-const enemySpacingY = 20; // Espacement vertical entre les rangées
-const enemyStartX = 50; // Position de départ de la première colonne
-const enemyStartY = -enemySpacingY * numRows; // Position de départ, juste au-dessus du canvas
+
 
 let enemiesCanShoot = false; // Indicateur de si les ennemis peuvent tirer
 
@@ -111,7 +113,7 @@ function generateObstacle() {
     const numCols = 6; // Nombre d'ennemis par rangée
     const enemySpacingX = 30; // Espacement horizontal entre les ennemis
     const enemySpacingY = 30; // Espacement vertical entre les rangées
-    const enemyStartX = 40; // Position de départ de la première colonne
+    const enemyStartX = 35; // Position de départ de la première colonne
     const enemyStartY = (-enemySpacingY * numRows) - (enemySpacingY * numRows); // Position de départ, juste au-dessus du canvas
 
     // Générer les ennemis pour cette vague
@@ -182,6 +184,9 @@ function updateGame() {
     drawObstacles();
     drawBullets();
     drawEnemyBullets();
+
+    // Afficher les vies restantes
+    drawLives();
 
     // Déplacer les obstacles, les balles du joueur et les balles des ennemis
     moveObstacles();
@@ -323,7 +328,7 @@ function showGameOver() {
     // Afficher le message de fin
     ctx.fillStyle = 'white';
     ctx.font = '30px Arial';
-    ctx.fillText('Game Over!', canvas.width / 2 - 80, canvas.height / 2);
+    ctx.fillText('Game Over!', canvas.width / 2 - 150, canvas.height / 2);
 
     // Afficher le bouton "Rejouer"
     ctx.font = '20px Arial';
@@ -332,6 +337,7 @@ function showGameOver() {
     // Activer la fonction de redémarrage sur clic
     canvas.addEventListener('click', restartGame);
 }
+
 
 
 
@@ -374,15 +380,17 @@ let lastShotTime = 0;
 const shotInterval = 500; // Temps en millisecondes entre chaque tir
 
 // Fonction pour gérer le tir lorsque la barre d'espace est maintenue enfoncée
+// Fonction pour gérer le tir lorsque la barre d'espace est maintenue enfoncée
 function handleShooting() {
-    if (keyState[' '] || keyState['Spacebar']) {  // ' ' pour certains navigateurs, 'Spacebar' pour d'autres
-        let currentTime = Date.now();
-        if (currentTime - lastShotTime > shotInterval) {
-            shootBullet();
-            lastShotTime = currentTime;
-        }
+    let currentTime = Date.now();
+    
+    // Vérifier si l'espace est enfoncé et si le temps entre les tirs est respecté
+    if ((keyState[' '] || keyState['Spacebar']) && currentTime - lastShotTime > shotInterval) {
+        shootBullet();
+        lastShotTime = currentTime; // Mettre à jour le dernier tir
     }
 }
+
 
 
 
@@ -398,30 +406,40 @@ function drawEnemyBullets() {
     }
 }
 
-// Function to move enemy bullets
+// Fonction pour déplacer les balles ennemies et vérifier les collisions
 function moveEnemyBullets() {
     for (let i = 0; i < enemyBullets.length; i++) {
         const bullet = enemyBullets[i];
         bullet.x += bullet.dx;
         bullet.y += bullet.dy;
 
-        // Remove the bullet if it goes off the screen
+        // Retirer la balle si elle sort de l'écran
         if (bullet.x < 0 || bullet.x > canvas.width || bullet.y < 0 || bullet.y > canvas.height) {
             enemyBullets.splice(i, 1);
             i--;
         }
 
-        // Check for collision with the player
+        // Vérifier la collision avec le joueur
         if (
             bullet.x < playerX + playerWidth &&
             bullet.x > playerX &&
             bullet.y < playerY + playerHeight &&
             bullet.y > playerY
         ) {
-            gameOver = true; // End the game if the player is hit
+            playerLives--;  // Décrémenter le nombre de vies
+
+            // Si le joueur a perdu toutes ses vies
+            if (playerLives <= 0) {
+                gameOver = true; // Fin du jeu
+            }
+
+            // Retirer la balle
+            enemyBullets.splice(i, 1);
+            i--;
         }
     }
 }
+
 
 let lastObstacleTime = 0;
 const obstacleInterval = 3000; // 3 secondes entre chaque appel de génération d'ennemi
@@ -451,6 +469,8 @@ document.addEventListener('keyup', function (e) {
         playerDy = 0;
     }
 });
+
+
 
 // Démarrer le jeu
 updateGame();
